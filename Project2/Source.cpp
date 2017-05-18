@@ -14,6 +14,7 @@ using namespace cv;
 Mat img_sample, img_target;
 Mat* img_puzzles;
 
+string name;
 int num_puzzles = 1;
 const int K = 2;
 
@@ -48,9 +49,8 @@ int main() {
 	for (int i = 0; i <= num_puzzles; i++) {
 		if (i == 0) {
 			getHomographyMatrix(img_sample, img_target, homography_matrices[0], 1);
-			//getHomographyMatrix(img_target, img_sample, homography_matrices[0], 1);
 			cout << "H:\n" << homography_matrices[0] << endl << endl;
-			backwardWarping(img_sample, img_target, homography_matrices[0]);
+			//backwardWarping(img_sample, img_target, homography_matrices[0]);
 		}
 		else {
 			// img_puzzle start from 0 to num_puzzles-1
@@ -67,14 +67,16 @@ int main() {
 			imshow("Origin", img_puzzles[i - 1]);
 			imshow("Target", img_sample);
 
-			if (i == 2) break;
+			//if (i == 2) break;
 		}
 		cout << "=========================================================" << endl << endl;
 	}
 
-	//backwardWarping(img_puzzles[0], img_target, homography_matrices[0]);
+	backwardWarping(img_samplesize, img_target, homography_matrices[0]);
+
 	imshow("Test", img_samplesize);
 	imshow("Result", img_target);
+	imwrite(name + ".bmp", img_samplesize);
 	//imshow("Result", img_sample);
 
 	waitKey(0);
@@ -234,17 +236,24 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 	vector<int> good_indices;
 	int num_good = 0;
 	double threashold = 5.0;
-	while (num_good < 40) {
+	while (num_good < 20) {
 		for (int i = 0; i < knn_mat.rows; i++) {
-			//if ()
-
-			double dist1 = norm(descriptors_1.row(i), descriptors_2.row(knn_mat.at<int>(i, 0)), NORM_L2);
-			double dist2 = norm(descriptors_1.row(i), descriptors_2.row(knn_mat.at<int>(i, 1)), NORM_L2);
-			if (dist2 / dist1 > threashold) {
-				num_good++;
-				good_indices.push_back(i);
-				//cout << dist1 << " " << dist2 << endl;
-				//cout << i << " " << knn_mat.at<int>(i,0) << " " << knn_mat.at<int>(i,1) << endl;
+			bool same_point = false;
+			vector<int>::iterator it;
+			for (it = good_indices.begin(); it != good_indices.end(); ++it) {
+				if (keypoints_1.at(*it).pt == keypoints_1.at(i).pt) {
+					same_point = true;
+				}
+			}
+			if (!same_point) {
+				double dist1 = norm(descriptors_1.row(i), descriptors_2.row(knn_mat.at<int>(i, 0)), NORM_L2);
+				double dist2 = norm(descriptors_1.row(i), descriptors_2.row(knn_mat.at<int>(i, 1)), NORM_L2);
+				if (dist2 / dist1 > threashold) {
+					num_good++;
+					good_indices.push_back(i);
+					//cout << dist1 << " " << dist2 << endl;
+					//cout << i << " " << knn_mat.at<int>(i,0) << " " << knn_mat.at<int>(i,1) << endl;
+				}
 			}
 		}
 		cout << "dist2 / dist1 > " << threashold << endl;
@@ -610,7 +619,6 @@ void drawKeypointsPairs(Mat img_1, Mat img_2, vector<KeyPoint> keypoints_1, vect
 void readImage()
 {
 	int data;
-	string name;
 
 	while (1) {
 		cout << "Which object do you want? (1:table, 2:logo, 3:other)" << endl;
