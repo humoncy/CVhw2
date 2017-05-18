@@ -58,14 +58,14 @@ int main() {
 			cout << "H " << i << endl;
 			cout << homography_matrices[i] << endl << endl;
 			backwardWarping(img_puzzles[i - 1], img_samplesize, homography_matrices[i]);
-			for (int j = 0; j < 4; j++) {
+			/*for (int j = 0; j < 4; j++) {
 				cout << origin[j] << ' ' << target[j] << endl;
 				cv::circle(img_puzzles[i - 1], origin[j], 10, Scalar(255 - 75 * j, 70 * j, 75 * j), 1);
 				cv::circle(img_sample, target[j], 10, Scalar(255 - 75 *j, 70 * j, 75 * j), 1);
-			}
+			}*/
 			//imshow("Result" + to_string(i), img_samplesize);
-			imshow("Origin", img_puzzles[i - 1]);
-			imshow("Target", img_sample);
+			//imshow("Origin", img_puzzles[i - 1]);
+			//imshow("Target", img_sample);
 
 			//if (i == 2) break;
 		}
@@ -76,7 +76,7 @@ int main() {
 
 	imshow("Test", img_samplesize);
 	imshow("Result", img_target);
-	imwrite(name + ".bmp", img_samplesize);
+	imwrite(name + ".bmp", img_target);
 	//imshow("Result", img_sample);
 
 	waitKey(0);
@@ -114,11 +114,14 @@ void getHomographyMatrix(Mat img_1, Mat img_2, Mat& homography_matrix, bool isTa
 		cout << keypoints_1.at(i).pt << ' ' << keypoints_2.at(i).pt << endl;
 	}*/
 
-	cout << "Good Points:\n";
-	for (int i = 0; i < good_pairs.rows; i++) {
-		cout << keypoints_1.at(good_pairs.at<int>(i, 0)).pt << ' ' << keypoints_2.at(good_pairs.at<int>(i, 1)).pt << endl;
-	}
-
+	//cout << "Good Points:\n";
+	//for (int i = 0; i < good_pairs.rows; i++) {
+	//	//cout << keypoints_1.at(good_pairs.at<int>(i, 0)).pt << ' ' << keypoints_2.at(good_pairs.at<int>(i, 1)).pt << endl;
+	//	cv::circle(img_puzzles[2], keypoints_1.at(good_pairs.at<int>(1, 0)).pt, 10, Scalar(255 - 75 * i, 70 * i, 75 * i), 1);
+	//	cv::circle(img_sample, keypoints_2.at(good_pairs.at<int>(1, 1)).pt, 10, Scalar(255 - 75 * i, 70 * i, 75 * i), 1);
+	//}
+	//imshow("puzzle 3", img_puzzles[2]);
+	//imshow("sample 3", img_sample);
 
 	drawKeypointsPairs(img_1, img_2, keypoints_1, keypoints_2, descriptors_1, descriptors_2, good_pairs);
 	
@@ -134,6 +137,7 @@ bool isBlack(Vec3b color)
 	else return false;
 }
 
+// no use
 void forwardWarping(Mat img_1, Mat & img_2, Mat homography_matrix)
 {
 	for (int rowIndex = 0; rowIndex < img_1.rows; rowIndex++) {
@@ -184,6 +188,7 @@ void backwardWarping(Mat img_1, Mat & img_2, Mat homography_matrix)
 	//imshow("try H", tryH);
 }
 
+// no use
 void backwardWarping(Mat img_1, Mat & img_2, Mat homography_matrix_Target,Mat homography_matrix)
 {
 	for (int rowIndex = 0; rowIndex < img_2.rows; rowIndex++) {
@@ -204,8 +209,8 @@ void backwardWarping(Mat img_1, Mat & img_2, Mat homography_matrix_Target,Mat ho
 			if (y >= img_1.cols)
 				y = img_1.cols - 1;
 
-			if (!isBlack(img_1.at<Vec3b>(x, y)))
-				img_2.at<Vec3b>(rowIndex, colIndex) = img_1.at<Vec3b>(x, y);
+			//if (!isBlack(img_1.at<Vec3b>(x, y)))
+			img_2.at<Vec3b>(rowIndex, colIndex) = img_1.at<Vec3b>(x, y);
 		}
 	}
 }
@@ -236,7 +241,7 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 	vector<int> good_indices;
 	int num_good = 0;
 	double threashold = 5.0;
-	while (num_good < 20) {
+	while (num_good < 15) {
 		for (int i = 0; i < knn_mat.rows; i++) {
 			bool same_point = false;
 			vector<int>::iterator it;
@@ -257,7 +262,7 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 			}
 		}
 		cout << "dist2 / dist1 > " << threashold << endl;
-		threashold -= 0.25;
+		threashold -= 0.2;
 	}
 	good_pairs = Mat(num_good, 2, CV_32S, Scalar(0));
 	for (int i = 0; i < num_good; i++) {
@@ -273,6 +278,7 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 
 	//cout << good_pairs;
 }
+
 // for fun
 void doSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_2, Mat& homography_matrix, bool isTarget)
 {
@@ -359,25 +365,25 @@ void makeA(int RandIndex[], Mat& A, Mat good_pairs, vector<KeyPoint> keypoints_1
 	}
 	cout << endl;*/
 
-	int X1 = keypoints_1.at(good_pairs.at<int>(RandIndex[0], 0)).pt.x;
-	int Y1 = keypoints_1.at(good_pairs.at<int>(RandIndex[0], 0)).pt.y;
-	int x1 = keypoints_2.at(good_pairs.at<int>(RandIndex[0], 1)).pt.x;
-	int y1 = keypoints_2.at(good_pairs.at<int>(RandIndex[0], 1)).pt.y;
+	float X1 = keypoints_1.at(good_pairs.at<int>(RandIndex[0], 0)).pt.x;
+	float Y1 = keypoints_1.at(good_pairs.at<int>(RandIndex[0], 0)).pt.y;
+	float x1 = keypoints_2.at(good_pairs.at<int>(RandIndex[0], 1)).pt.x;
+	float y1 = keypoints_2.at(good_pairs.at<int>(RandIndex[0], 1)).pt.y;
 
-	int X2 = keypoints_1.at(good_pairs.at<int>(RandIndex[1], 0)).pt.x;
-	int Y2 = keypoints_1.at(good_pairs.at<int>(RandIndex[1], 0)).pt.y;
-	int x2 = keypoints_2.at(good_pairs.at<int>(RandIndex[1], 1)).pt.x;
-	int y2 = keypoints_2.at(good_pairs.at<int>(RandIndex[1], 1)).pt.y;
+	float X2 = keypoints_1.at(good_pairs.at<int>(RandIndex[1], 0)).pt.x;
+	float Y2 = keypoints_1.at(good_pairs.at<int>(RandIndex[1], 0)).pt.y;
+	float x2 = keypoints_2.at(good_pairs.at<int>(RandIndex[1], 1)).pt.x;
+	float y2 = keypoints_2.at(good_pairs.at<int>(RandIndex[1], 1)).pt.y;
 
-	int X3 = keypoints_1.at(good_pairs.at<int>(RandIndex[2], 0)).pt.x;
-	int Y3 = keypoints_1.at(good_pairs.at<int>(RandIndex[2], 0)).pt.y;
-	int x3 = keypoints_2.at(good_pairs.at<int>(RandIndex[2], 1)).pt.x;
-	int y3 = keypoints_2.at(good_pairs.at<int>(RandIndex[2], 1)).pt.y;
+	float X3 = keypoints_1.at(good_pairs.at<int>(RandIndex[2], 0)).pt.x;
+	float Y3 = keypoints_1.at(good_pairs.at<int>(RandIndex[2], 0)).pt.y;
+	float x3 = keypoints_2.at(good_pairs.at<int>(RandIndex[2], 1)).pt.x;
+	float y3 = keypoints_2.at(good_pairs.at<int>(RandIndex[2], 1)).pt.y;
 
-	int X4 = keypoints_1.at(good_pairs.at<int>(RandIndex[3], 0)).pt.x;
-	int Y4 = keypoints_1.at(good_pairs.at<int>(RandIndex[3], 0)).pt.y;
-	int x4 = keypoints_2.at(good_pairs.at<int>(RandIndex[3], 1)).pt.x;
-	int y4 = keypoints_2.at(good_pairs.at<int>(RandIndex[3], 1)).pt.y;
+	float X4 = keypoints_1.at(good_pairs.at<int>(RandIndex[3], 0)).pt.x;
+	float Y4 = keypoints_1.at(good_pairs.at<int>(RandIndex[3], 0)).pt.y;
+	float x4 = keypoints_2.at(good_pairs.at<int>(RandIndex[3], 1)).pt.x;
+	float y4 = keypoints_2.at(good_pairs.at<int>(RandIndex[3], 1)).pt.y;
 
 	//cout << X1 << ' ' << x1 << ' ' << -X1*x1 << endl;
 	
