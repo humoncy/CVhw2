@@ -20,9 +20,9 @@ const int K = 2;
 
 void readImage();
 void getHomographyMatrix(Mat img_1, Mat img_2, Mat& homography_matrix, bool isTarget);
-void forwardWarping(Mat img_1, Mat& img_2, Mat homography_matrix);
+void forwardWarping(Mat img_1, Mat& img_2, Mat homography_matrix); // no use
 void backwardWarping(Mat img_1, Mat& img_2, Mat homography_matrix);
-void backwardWarping(Mat img_1, Mat& img_2, Mat homography_matrix_Target, Mat homography_matrix);
+void backwardWarping(Mat img_1, Mat& img_2, Mat homography_matrix_Target, Mat homography_matrix); // no use
 void kNN(int k, Mat descriptors_1, Mat descriptors_2 , Mat knn_mat);
 void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_2, Mat descriptors_1, Mat descriptors_2, Mat knn_mat, Mat& homography_matrix);
 void doRANSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_2, Mat& homography_matrix, bool isTarget);
@@ -49,15 +49,15 @@ int main() {
 	for (int i = 0; i <= num_puzzles; i++) {
 		if (i == 0) {
 			getHomographyMatrix(img_sample, img_target, homography_matrices[0], 1);
-			cout << "H:\n" << homography_matrices[0] << endl << endl;
+			//cout << "H:\n" << homography_matrices[0] << endl << endl;
 			//backwardWarping(img_sample, img_target, homography_matrices[0]);
 		}
 		else {
 			// img_puzzle start from 0 to num_puzzles-1
 			getHomographyMatrix(img_puzzles[i - 1], img_sample, homography_matrices[i], 0);
-			cout << "H " << i << endl;
-			cout << homography_matrices[i] << endl << endl;
+			//cout << "H " << i << endl << homography_matrices[i] << endl << endl;;
 			backwardWarping(img_puzzles[i - 1], img_samplesize, homography_matrices[i]);
+			
 			/*for (int j = 0; j < 4; j++) {
 				cout << origin[j] << ' ' << target[j] << endl;
 				cv::circle(img_puzzles[i - 1], origin[j], 10, Scalar(255 - 75 * j, 70 * j, 75 * j), 1);
@@ -165,9 +165,12 @@ void backwardWarping(Mat img_1, Mat & img_2, Mat homography_matrix)
 	
 	for (int rowIndex = 0; rowIndex < img_2.rows; rowIndex++) {
 		for (int colIndex = 0; colIndex < img_2.cols; colIndex++) {
+			//   Be aware of the positions of x and y
+			// x: col, y:row
 			Mat position = (Mat_<float>(3, 1) << colIndex, rowIndex, 1);
 			Mat hx = homography_matrix.inv() * position;
 
+			// 
 			int x = (int)(hx.at<float>(1, 0) / hx.at<float>(2, 0));
 			int y = (int)(hx.at<float>(0, 0) / hx.at<float>(2, 0));
 
@@ -240,7 +243,7 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 {
 	vector<int> good_indices;
 	int num_good = 0;
-	double threashold = 5.0;
+	double threashold = 6.0;
 	while (num_good < 15) {
 		for (int i = 0; i < knn_mat.rows; i++) {
 			bool same_point = false;
@@ -261,7 +264,7 @@ void findFeaturepoints(vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_
 				}
 			}
 		}
-		cout << "dist2 / dist1 > " << threashold << endl;
+		//cout << "dist2 / dist1 > " << threashold << endl;
 		threashold -= 0.2;
 	}
 	good_pairs = Mat(num_good, 2, CV_32S, Scalar(0));
@@ -348,8 +351,8 @@ void doSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<Key
 
 		cout << origin[i] << ' ' << '[' << hx.at<float>(0, 0) / hx.at<float>(2, 0) << ',' << hx.at<float>(1, 0) / hx.at<float>(2, 0) << ']' << endl;
 	}
-	cout << "A: " << endl;
-	cout << debugA << endl;
+	//cout << "A: " << endl;
+	//cout << debugA << endl;
 
 	cout << endl;
 	cout << "knn rows: " << knn_mat.rows << endl;
@@ -490,7 +493,7 @@ int calInliners(Mat H, Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1
 			float distance1 = (x1 - x_)*(x1 - x_) + (y1 - y_)*(y1 - y_);
 			float distance2 = (x2 - x_)*(x2 - x_) + (y2 - y_)*(y2 - y_);
 
-			if (distance1 < 1) {
+			if (distance1 < 1 || distance2 < 1) {
 				num_inliners++;
 			}
 		}
@@ -503,34 +506,32 @@ int calInliners(Mat H, Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1
 void doRANSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<KeyPoint> keypoints_2, Mat& homography_matrix, bool isTarget)
 {
 	doSAC(knn_mat, good_pairs, keypoints_1, keypoints_2, homography_matrix, isTarget);
-
 	return;
 	
+	// codes below is for random select, but still not succeed
 	int num_inliners = 0;
 	Mat H(3, 3, CV_32F, Scalar(0));
 	int indexRecorder[4] = { 0 };
 
-	int random_times = 2000;
+	int random_times = 10000;
 	while (1) {
 		Mat A(8, 9, CV_32F, Scalar(0));
 		Mat tmp_H(3, 3, CV_32F, Scalar(0));
 
 		//cout << "number of good pairs: " << good_pairs.rows << endl;
-		int RandIndex[4] = { 0 };
+		int RandIndex[4] = { -1 };
 		for (int i = 0; i < 4; i++) {
 			RandIndex[i] = rand() % good_pairs.rows;
 			for (int j = 0; j < 4; j++) {
 				if ((i != j) && RandIndex[i] == RandIndex[j]) {
 					RandIndex[i] = rand() % good_pairs.rows;
-					j = 0;
+					j = -1;
 				}
 			}
 		}
 
 		makeA(RandIndex, A, good_pairs, keypoints_1, keypoints_2);
-		/*cout << "A.t():\n" << A << endl;
-		cout << "A:\n" << A.t() << endl;
-		cout << "AtA\n" << A.t() * A << endl;*/
+
 		Mat eigenvalues, eigenvectors;
 		eigen(A.t()*A, eigenvalues, eigenvectors);
 		//cout << eigenvalues << endl;
@@ -549,10 +550,6 @@ void doRANSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<
 			for (int i = 0; i < 4; i++) {
 				indexRecorder[i] = RandIndex[i];
 			}
-			for (int i = 0; i < 4; i++) {
-		origin[i] = keypoints_1.at(good_pairs.at<int>(RandIndex[i], 0)).pt;
-		target[i] = keypoints_2.at(good_pairs.at<int>(RandIndex[i], 1)).pt;
-	}
 		}
 		//cout << num_inliners << ' ' << knn_mat.rows * 0.5 << endl;
 
@@ -561,7 +558,8 @@ void doRANSAC(Mat knn_mat, Mat good_pairs, vector<KeyPoint> keypoints_1, vector<
 			tmp_H.copyTo(H);
 			break;
 		}
-		if (!isTarget && (num_inliners > knn_mat.rows * 0.5 || random_times == -3000)) {
+		if (!isTarget && random_times == 0) {
+			tmp_H.copyTo(H);
 			break;
 		}
 	}
@@ -595,15 +593,11 @@ void drawKeypointsPairs(Mat img_1, Mat img_2, vector<KeyPoint> keypoints_1, vect
 		pair2.push_back(keypoints_2.at(good_pairs.at<int>(i, 1)));
 	}
 
-	
-
 	Mat pair_feature1, pair_feature2;
 	Mat feature1, feature2;
 
-
 	drawKeypoints(img_1, pair1, pair_feature1, Scalar(255, 255, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	//imshow("result1", pair_feature1);
-
 
 	drawKeypoints(img_1, keypoints_1, feature1, Scalar(200, 200, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	//imshow("keypoints1", feature1);
